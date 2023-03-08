@@ -6,3 +6,5 @@
 /02 Train Stable Diffusion/.ipynb_checkpoints
 /Datasets/.ipynb_checkpoints/
 /01 Create Dataset/.ipynb_checkpoints/
+.ipynb_checkpoints/
+.DS_STORE
