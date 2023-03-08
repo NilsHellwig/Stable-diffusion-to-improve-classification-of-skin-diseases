@@ -1,2 +1,4 @@
-/Datasets/dataset
 /Datasets/raw_dataset
+/Datasets/dataset/train
+/Datasets/dataset/test
+/Datasets/raw_dataset.zip

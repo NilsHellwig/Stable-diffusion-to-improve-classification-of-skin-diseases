@@ -45,6 +45,9 @@ from diffusers.training_utils import EMAModel
 from diffusers.utils import check_min_version, deprecate
 from diffusers.utils.import_utils import is_xformers_available
 
+from torch.utils.data import DataLoader, RandomSampler, DistributedSampler
+from torch.utils.data.sampler import WeightedRandomSampler, ImbalancedDatasetSampler
+
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.15.0.dev0")
@@ -296,6 +299,10 @@ def parse_args():
     )
     parser.add_argument(
         "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
+    )
+    
+    parser.add_argument(
+        "--oversample", default=False, help="Whether or not to use oversampling."
     )
 
     args = parser.parse_args()
@@ -591,13 +598,19 @@ def main():
         input_ids = torch.stack([example["input_ids"] for example in examples])
         return {"pixel_values": pixel_values, "input_ids": input_ids}
 
-    # DataLoaders creation:
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset,
-        shuffle=True,
-        collate_fn=collate_fn,
-        batch_size=args.train_batch_size,
-        num_workers=args.dataloader_num_workers,
+    # Add oversampling
+    if args.oversample:
+        weights = [1.0 / count for count in dataset["train"].value_counts("label")]
+        sampler = WeightedRandomSampler(weights, len(dataset["train"]))
+    else:
+        sampler = RandomSampler(dataset["train"])
+
+    # Create dataloaders
+    train_dataloader = DataLoader(
+        dataset["train"],
+        sampler=sampler,
+        batch_size=args.per_device_train_batch_size,
+        num_workers=args.num_workers,
     )
 
     # Scheduler and math around the number of training steps.
