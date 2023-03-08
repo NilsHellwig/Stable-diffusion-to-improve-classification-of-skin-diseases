@@ -46,7 +46,10 @@ from diffusers.utils import check_min_version, deprecate
 from diffusers.utils.import_utils import is_xformers_available
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler
-from torch.utils.data.sampler import WeightedRandomSampler, ImbalancedDatasetSampler
+from torch.utils.data.sampler import WeightedRandomSampler
+from torchsampler import ImbalancedDatasetSampler
+
+from collections import Counter
 
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -600,17 +603,22 @@ def main():
 
     # Add oversampling
     if args.oversample:
-        weights = [1.0 / count for count in dataset["train"].value_counts("label")]
-        sampler = WeightedRandomSampler(weights, len(dataset["train"]))
+        label_counts = Counter([sample['label'] for sample in train_dataset])
+
+        # Erstelle eine Liste mit Gewichten für jedes Label
+        weights = [1.0 / label_counts[sample['label']] for sample in train_dataset]
+        print("label weights", weights)
+        sampler = WeightedRandomSampler(weights, len(train_dataset))
     else:
-        sampler = RandomSampler(dataset["train"])
+        sampler = RandomSampler(train_dataset)
 
     # Create dataloaders
     train_dataloader = DataLoader(
-        dataset["train"],
+        train_dataset,
         sampler=sampler,
-        batch_size=args.per_device_train_batch_size,
-        num_workers=args.num_workers,
+        collate_fn=collate_fn,
+        batch_size=args.train_batch_size,
+        num_workers=args.dataloader_num_workers,
     )
 
     # Scheduler and math around the number of training steps.
