@@ -47,7 +47,6 @@ from diffusers.utils.import_utils import is_xformers_available
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler
 from torch.utils.data.sampler import WeightedRandomSampler
-from torchsampler import ImbalancedDatasetSampler
 
 from collections import Counter
 
@@ -607,7 +606,6 @@ def main():
 
         # Erstelle eine Liste mit Gewichten für jedes Label
         weights = [1.0 / label_counts[sample['label']] for sample in train_dataset]
-        print("label weights", weights)
         sampler = WeightedRandomSampler(weights, len(train_dataset))
     else:
         sampler = RandomSampler(train_dataset)
